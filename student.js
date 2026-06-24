@@ -138,18 +138,23 @@ window.goHome = function() {
 // ==========================================
 function loadDataFB() {
     let currentYear = window.user.year || "1/2568";
-const q = query(collection(db, "jobs"), 
-    where("studentEmail", "==", window.user.email), 
-    where("year", "==", window.user.year) 
-);
-    // เพิ่ม error callback เพื่อให้เตือนกรณีลืมทำ Index ใน Firebase
+    
+    // ดึงด้วยเงื่อนไขเดียวเพื่อหลีกเลี่ยง Error Firebase Index
+    const q = query(collection(db, "jobs"), where("studentEmail", "==", window.user.email));
+    
     onSnapshot(q, (snap) => {
         window.globalJobs = []; let tH = 0, dC = 0, sumRate=0, countRate=0;
+        
         snap.forEach(doc => { 
-            let j = doc.data(); j.id = doc.id; window.globalJobs.push(j); 
-            if(j.status === 'Completed') {
-                tH += parseFloat(j.hours||0); dC++;
-                if(j.rating) { sumRate += parseFloat(j.rating); countRate++; }
+            let j = doc.data(); 
+            // กรองปีการศึกษาด้วย JavaScript แทน
+            if (j.year === currentYear) {
+                j.id = doc.id; 
+                window.globalJobs.push(j); 
+                if(j.status === 'Completed') {
+                    tH += parseFloat(j.hours||0); dC++;
+                    if(j.rating) { sumRate += parseFloat(j.rating); countRate++; }
+                }
             }
         });
         
@@ -163,7 +168,8 @@ const q = query(collection(db, "jobs"),
         
         renderStudent(window.globalJobs);
     }, (error) => {
-        console.error("Firestore Index Error (คลิกลิงก์ด้านล่างเพื่อสร้างดัชนี): ", error);
+        console.error("Firestore Load Error: ", error);
+        Swal.fire('โหลดข้อมูลล้มเหลว', error.message, 'error');
     });
 }
 

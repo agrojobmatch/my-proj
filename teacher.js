@@ -173,10 +173,23 @@ window.resetFilter = function() { document.getElementById('teaDateFilter').value
 window.confirmBookJobFB = async function(id, studentEmail) {
     const t = document.getElementById('t-'+id).value, l = document.getElementById('l-'+id).value;
     if(!t || !l) return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกรายละเอียดงานและสถานที่', 'warning');
-    let stuHours = 0; window.globalJobs.forEach(j => { if (j.studentEmail === studentEmail && j.status === 'Completed') stuHours += parseFloat(j.hours||0); });
-    let limit = 40; try { const qUser = query(collection(db, "users"), where("email", "==", studentEmail)); const snapUser = await getDocs(qUser); snapUser.forEach(doc => { limit = parseFloat(doc.data().limit) || 40; }); } catch(e) {}
+// เปลี่ยนช่วงเช็คโควตาเดิม เป็นโค้ดนี้ครับ
+let stuHours = 0; let limit = 40; 
+let currentYear = window.user.year;
 
-    if (stuHours >= limit) return Swal.fire('จองตัวไม่ได้!', `นักศึกษาคนนี้ชั่วโมงทำงานเต็มโควตาแล้ว (${stuHours.toFixed(1)}/${limit} ชม.)\nระบบไม่อนุญาตให้รับงานเพิ่มเด็ดขาด`, 'error');
+try {
+    const qUser = query(collection(db, "users"), where("email", "==", studentEmail)); 
+    const snapUser = await getDocs(qUser); 
+    snapUser.forEach(doc => { 
+        if(doc.data().year === currentYear) limit = parseFloat(doc.data().limit) || 40; 
+    });
+    
+    window.globalJobs.forEach(j => { 
+        if (j.studentEmail === studentEmail && j.year === currentYear && j.status === 'Completed') stuHours += parseFloat(j.hours||0); 
+    });
+} catch(e) {}
+
+if (stuHours >= limit) return Swal.fire('จองตัวไม่ได้!', `นักศึกษาคนนี้ชั่วโมงทำงานรอบ ${currentYear} เต็มโควตาแล้ว (${stuHours.toFixed(1)}/${limit} ชม.)`, 'error');
 
     Swal.fire({ title: 'กำลังจองงาน...', didOpen: () => Swal.showLoading() });
     try {
@@ -206,33 +219,74 @@ window.openApproveModalFB = function(id, studentEmail, timeReal) {
 };
 
 window.confirmSaveApprovalFB = async function() {
-    const id = document.getElementById('apv-job-id').value, studentEmail = document.getElementById('apv-student-email').value, s = document.getElementById('apv-start').value, e = document.getElementById('apv-end').value;
+    const id = document.getElementById('apv-job-id').value, 
+          studentEmail = document.getElementById('apv-student-email').value, 
+          s = document.getElementById('apv-start').value, 
+          e = document.getElementById('apv-end').value;
+          
     if(!s || !e) return Swal.fire('ข้อมูลไม่ครบ', 'กรุณาระบุเวลาเริ่มและเลิกงาน', 'warning');
     
-    let sm = parseInt(s.split(':')[0])*60 + parseInt(s.split(':')[1]), em = parseInt(e.split(':')[0])*60 + parseInt(e.split(':')[1]), hrs = ((em - sm) / 60).toFixed(2);
+    let sm = parseInt(s.split(':')[0])*60 + parseInt(s.split(':')[1]), 
+        em = parseInt(e.split(':')[0])*60 + parseInt(e.split(':')[1]), 
+        hrs = ((em - sm) / 60).toFixed(2);
+        
+    // ประกาศตัวแปร jobData ครั้งเดียวตรงนี้
     let jobData = window.globalJobs.find(x => x.id === id);
     
-    if(jobData && jobData.jobType === 'Piecework' && jobData.fixedHours) { hrs = parseFloat(jobData.fixedHours).toFixed(2); } 
-    else if(hrs <= 0) { return Swal.fire('เวลาไม่ถูกต้อง', 'เวลาเลิกงานต้องมากกว่าเวลาเริ่มงาน', 'warning'); }
+    if(jobData && jobData.jobType === 'Piecework' && jobData.fixedHours) { 
+        hrs = parseFloat(jobData.fixedHours).toFixed(2); 
+    } else if(hrs <= 0) { 
+        return Swal.fire('เวลาไม่ถูกต้อง', 'เวลาเลิกงานต้องมากกว่าเวลาเริ่มงาน', 'warning'); 
+    }
 
-    let currentTotal = 0; let limit = 40;
+    let currentTotal = 0; 
+    let limit = 40; 
+    
+    // ดึงค่าปีการศึกษามาใช้ได้เลย ไม่ต้องประกาศ jobData ซ้ำแล้ว
+    let jobYear = jobData ? jobData.year : window.user.year;
+
     try {
-        const qUser = query(collection(db, "users"), where("email", "==", studentEmail)); const snapUser = await getDocs(qUser); snapUser.forEach(doc => { limit = parseFloat(doc.data().limit) || 40; });
-        const qJobs = query(collection(db, "jobs"), where("studentEmail", "==", studentEmail)); const snapJobs = await getDocs(qJobs);
-        snapJobs.forEach(doc => { let j = doc.data(); if ((j.status === 'Completed' || j.status === 'PendingApproval') && doc.id !== id) { currentTotal += parseFloat(j.hours || 0); } });
-    } catch(err) {}
+        // 1. ดึงโควตาตามที่แอดมินกำหนดในรอบนั้นๆ แบบแม่นยำ
+        const qUser = query(collection(db, "users"), where("email", "==", studentEmail)); 
+        const snapUser = await getDocs(qUser); 
+        snapUser.forEach(doc => { 
+            let d = doc.data();
+            if (d.year === jobYear) {
+                limit = parseFloat(d.limit) || 40; // ได้ลิมิตตรงตามที่แอดมินตั้ง
+            }
+        });
 
+        // 2. รวมชั่วโมงเฉพาะรอบนั้นๆ เพื่อกันข้ามเทอม
+        const qJobs = query(collection(db, "jobs"), where("studentEmail", "==", studentEmail)); 
+        const snapJobs = await getDocs(qJobs);
+        snapJobs.forEach(doc => { 
+            let j = doc.data(); 
+            if (j.year === jobYear && (j.status === 'Completed' || j.status === 'PendingApproval') && doc.id !== id) { 
+                currentTotal += parseFloat(j.hours || 0); 
+            } 
+        });
+    } catch(err) {
+        console.error("Error calculating hours:", err);
+    }
+
+    // --- เพิ่มเงื่อนไขตรวจสอบโควตาที่หายไป เพื่อให้ระบบบล็อกถ้ายอดชั่วโมงเกิน ---
     if (currentTotal + parseFloat(hrs) > limit) {
-        return Swal.fire('อนุมัติไม่ได้ โควตาเกิน!', `นักศึกษาคนนี้เหลือโควตาเบิกได้อีกแค่ ${(limit - currentTotal).toFixed(1)} ชม. (แต่คุณจะอนุมัติให้ ${hrs} ชม.)\nกรุณาแก้ไขเวลาลดลงให้พอดี หรือตีกลับงานนี้`, 'error');
+        let remain = limit - currentTotal;
+        return Swal.fire('อนุมัติไม่ได้ โควตาเกิน!', `นักศึกษาคนนี้เหลือโควตาเบิกได้อีกแค่ ${remain.toFixed(1)} ชม. (แต่คุณจะอนุมัติให้ ${hrs} ชม.)\nกรุณาแก้ไขเวลาลดลงให้พอดี หรือตีกลับงานนี้`, 'error');
     }
 
     Swal.fire({ title: 'กำลังอนุมัติ...', didOpen: () => Swal.showLoading() });
     try {
         await updateDoc(doc(db, "jobs", id), { status: "Completed", timeReal: `${s}-${e}`, hours: parseFloat(hrs) });
-        let subject = `✅ งานของคุณได้รับการอนุมัติแล้ว`; let emailMsg = `สวัสดี,\n\n ${window.user.name} ได้ทำการตรวจสอบและอนุมัติเวลาทำงานของคุณเรียบร้อยแล้ว\n\n[สรุปข้อมูลการอนุมัติ]\n⏰ เวลาที่บันทึก: ${s} - ${e}\n⏱ จำนวนชั่วโมงที่ได้: ${hrs} ชั่วโมง\n\nชั่วโมงทำงานสะสมของคุณได้ถูกอัปเดตแล้ว สามารถเข้าตรวจสอบประวัติได้ที่:\nhttps://agro-job-match.web.app`;
+        let subject = `✅ งานของคุณได้รับการอนุมัติแล้ว`; 
+        let emailMsg = `สวัสดี,\n\n ${window.user.name} ได้ทำการตรวจสอบและอนุมัติเวลาทำงานของคุณเรียบร้อยแล้ว\n\n[สรุปข้อมูลการอนุมัติ]\n⏰ เวลาที่บันทึก: ${s} - ${e}\n⏱ จำนวนชั่วโมงที่ได้: ${hrs} ชั่วโมง\n\nชั่วโมงทำงานสะสมของคุณได้ถูกอัปเดตแล้ว สามารถเข้าตรวจสอบประวัติได้ที่:\nhttps://agro-job-match.web.app`;
         window.sendEmailNotify(studentEmail, subject, emailMsg);
-        bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide(); Swal.fire('สำเร็จ', 'อนุมัติงานและอัปเดตชั่วโมงเรียบร้อย', 'success');
-    } catch(err) { Swal.fire('ผิดพลาด', err.message, 'error'); }
+        
+        bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide(); 
+        Swal.fire('สำเร็จ', 'อนุมัติงานและอัปเดตชั่วโมงเรียบร้อย', 'success');
+    } catch(err) { 
+        Swal.fire('ผิดพลาด', err.message, 'error'); 
+    }
 };
 
 window.confirmRejectJobFB = async function() {
@@ -357,10 +411,15 @@ window.confirmAssignJobFB = async function() {
     if(!student) { q = query(collection(db, "users"), where("role", "==", "Student"), where("studentId", "==", search)); snap = await getDocs(q); snap.forEach(doc => student = doc.data()); }
     if (!student) return Swal.fire('ไม่พบนักศึกษา', 'ไม่พบรหัสนักศึกษา หรือ อีเมลนี้ในระบบ', 'error');
 
-    let stuHours = 0; window.globalJobs.forEach(j => { if (j.studentEmail === student.email && j.status === 'Completed') stuHours += parseFloat(j.hours||0); });
-    let limit = parseFloat(student.limit) || 40;
-    
-    if (stuHours >= limit) return Swal.fire('มอบหมายงานไม่ได้!', `นักศึกษาคนนี้ชั่วโมงทำงานเต็มโควตาแล้ว (${stuHours.toFixed(1)}/${limit} ชม.)\nระบบไม่อนุญาตให้รับงานเพิ่มเด็ดขาด`, 'error');
+let stuHours = 0; let limit = 40; 
+let currentYear = year; // ปีที่แอดมินเลือกจะมอบหมาย
+
+limit = parseFloat(student.limit) || 40; // ดึงลิมิตจากข้อมูลนักศึกษา
+window.globalJobs.forEach(j => { 
+    if (j.studentEmail === student.email && j.year === currentYear && j.status === 'Completed') stuHours += parseFloat(j.hours||0); 
+});
+
+if (stuHours >= limit) return Swal.fire('มอบหมายงานไม่ได้!', `ชั่วโมงทำงานรอบ ${currentYear} เต็มโควตาแล้ว (${stuHours.toFixed(1)}/${limit} ชม.)`, 'error');
 
     Swal.fire({ title: 'กำลังค้นหาและมอบหมายงาน...', didOpen: () => Swal.showLoading() });
     try {

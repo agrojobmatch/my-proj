@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ - ทุนทำงานแลกเปลี่ยน Agro-industry PSU</title>
+  
+  <link rel="icon" href="https://img2.pic.in.th/logo-job-match-1.1.png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  
+  <link rel="stylesheet" href="./css/style.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+<div id="login-section" class="login-wrapper">
+  <div class="card login-card p-4" style="width: 90%; max-width: 450px;">
+    <div class="text-center mb-4 text-primary">
+      <img src="https://img2.pic.in.th/logo-job-match-1.1.png" class="login-logo" alt="Agro PSU Logo">
+      <h4 class="fw-bold text-dark mt-2">ทุนทำงานแลกเปลี่ยน<br>Agro-industry PSU</h4>
+    </div>
+<ul class="nav nav-pills nav-fill mb-3 p-1 bg-light rounded-pill" id="loginTab" role="tablist">
+      <li class="nav-item" role="presentation"><button class="nav-link active rounded-pill fw-bold small" id="tab-student" data-bs-toggle="pill" data-bs-target="#login-student" type="button" role="tab" onclick="window.currentUserTypeTab='Student'">นักศึกษา</button></li>
+      <li class="nav-item" role="presentation"><button class="nav-link rounded-pill fw-bold small" id="tab-admin" data-bs-toggle="pill" data-bs-target="#login-admin" type="button" role="tab" onclick="window.currentUserTypeTab='Admin'">อาจารย์/บุคลากร</button></li>
+    </ul>
+
+    <div id="login-error-msg" class="alert alert-danger py-2 px-3 small fw-bold text-center border-0 shadow-sm" style="display: none; border-radius: 10px;"></div>
+
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="login-student" role="tabpanel">
+        <div class="text-start mb-3">
+          <label class="form-label text-secondary fw-bold small">ปีการศึกษา</label>
+          <select id="loginYear" class="form-select mb-3 shadow-sm border-0 bg-light"><option value="1/2568">1/2568</option></select>
+          <label class="form-label text-secondary fw-bold small">PSU Email & รหัสผ่าน</label>
+          <div class="input-group mb-2"><span class="input-group-text bg-white border-end-0"><i class="bi bi-envelope text-muted"></i></span><input type="email" id="email-stu" class="form-control border-start-0" placeholder="username@psu.ac.th"></div>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-key text-muted"></i></span>
+            <input type="password" id="pass-stu" class="form-control border-start-0 border-end-0" placeholder="รหัสผ่าน (เริ่มต้น: Agro123456)" onkeydown="if(event.key==='Enter') window.loginFB()">
+            <span class="input-group-text bg-white border-start-0" style="cursor: pointer;" onclick="window.togglePasswordFB('pass-stu', 'eye-stu')"><i class="bi bi-eye-slash text-muted" id="eye-stu"></i></span>
+          </div>
+          <div class="text-end mt-1 mb-3">
+              <a href="#" onclick="window.forgotPasswordFB(); return false;" class="text-decoration-none small">ลืมรหัสผ่าน?</a>
+          </div>
+        </div>
+        <button type="button" onclick="window.loginFB()" class="btn btn-primary w-100 py-2 rounded-pill shadow-sm fw-bold">เข้าสู่ระบบ (นักศึกษา)</button>
+      </div>
+      
+      <div class="tab-pane fade" id="login-admin" role="tabpanel">
+        <div class="text-start mb-3">
+          <label class="form-label text-secondary fw-bold small">PSU Email & รหัสผ่าน</label>
+          <div class="input-group mb-2"><span class="input-group-text bg-white border-end-0"><i class="bi bi-person-badge text-muted"></i></span><input type="email" id="email-adm" class="form-control border-start-0" placeholder="username@psu.ac.th"></div>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-key text-muted"></i></span>
+            <input type="password" id="pass-adm" class="form-control border-start-0 border-end-0" placeholder="รหัสผ่าน (เริ่มต้น: Agro123456)" onkeydown="if(event.key==='Enter') window.loginFB()">
+            <span class="input-group-text bg-white border-start-0" style="cursor: pointer;" onclick="window.togglePasswordFB('pass-adm', 'eye-adm')"><i class="bi bi-eye-slash text-muted" id="eye-adm"></i></span>
+          </div>
+          <div class="text-end mt-1 mb-3">
+              <a href="#" onclick="window.forgotPasswordFB(); return false;" class="text-decoration-none small">ลืมรหัสผ่าน?</a>
+          </div>
+        </div>
+        <button type="button" onclick="window.loginFB()" class="btn btn-dark w-100 py-2 rounded-pill shadow-sm fw-bold">เข้าสู่ระบบ (Admin/Staff)</button>
+      </div>
+    </div>
+
+<script type="module" src="./js/auth.js"></script>
+
+</body>
+</html>

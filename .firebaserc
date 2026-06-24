@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "agro-job-math"
+  },
+  "targets": {
+    "agro-job-math": {
+      "hosting": {
+        "matchsite": [
+          "agro-job-match"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

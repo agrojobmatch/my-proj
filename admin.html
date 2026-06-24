@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ผู้ดูแลระบบ - ทุนทำงานแลกเปลี่ยน Agro-industry PSU</title>
+  
+  <link rel="icon" href="https://img5.pic.in.th/file/secure-sv1/logo-job-match-1.19216877e525c9cd0.png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  
+  <link rel="stylesheet" href="./css/style.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+
+<nav id="top-navbar" class="navbar navbar-expand-lg fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="#" onclick="window.goHome(); return false;">
+        <img src="https://agro.psu.ac.th/agro6/wp-content/uploads/2024/07/AGRO-PSU-Logo-Color-01-1536x1536.png" alt="Agro PSU">
+        ทุนทำงานแลกเปลี่ยน Agro-industry PSU
+    </a>
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto me-3" id="nav-menu-items">
+        <li class="nav-item"><button class="nav-link active" onclick="window.switchPage('page-admin', this)">🛡️ แอดมิน</button></li>
+      </ul>
+      <div class="d-flex align-items-center border-start ps-3 mt-2 mt-lg-0">
+        <div class="me-3 text-end lh-1"><div id="uName" class="fw-bold text-dark" style="font-size: 0.9rem;">กำลังโหลด...</div><small id="uRole" class="text-muted" style="font-size: 0.75rem;">Admin</small></div>
+        <button onclick="window.logoutSystemFB()" class="btn btn-sm btn-outline-danger px-3" title="ออกจากระบบ"><i class="bi bi-power"></i></button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div id="main-container" class="container pb-5">
+  
+  <div id="page-admin" class="content-page">
+    <div class="mt-3">
+      <h5 class="fw-bold mb-4 text-dark"><i class="bi bi-shield-lock-fill me-2"></i>ผู้ดูแลระบบ (Admin)</h5>
+      
+      <div class="card p-2 mb-4">
+        <ul class="nav nav-pills nav-fill" role="tablist">
+          <li class="nav-item"><button class="nav-link active rounded-3" data-bs-toggle="tab" data-bs-target="#adm-dashboard" onclick="window.loadAdminDashboardFB()" type="button">📊 ภาพรวม</button></li>
+          <li class="nav-item"><button class="nav-link rounded-3" data-bs-toggle="tab" data-bs-target="#adm-finance" onclick="window.loadAdminFinanceFB()" type="button">💰 การเบิกจ่าย</button></li>
+          <li class="nav-item"><button class="nav-link rounded-3" data-bs-toggle="tab" data-bs-target="#adm-users" onclick="window.loadUserTableFB(document.getElementById('userTypeSelector').value)" type="button">👥 ผู้ใช้งาน</button></li>
+          <li class="nav-item"><button class="nav-link rounded-3" data-bs-toggle="tab" data-bs-target="#adm-profiles" type="button">🔍 ค้นหา นศ.</button></li>
+        </ul>
+      </div>
+
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="adm-dashboard">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+              <div class="d-flex align-items-center"><h6 class="text-muted fw-bold me-2 my-0">สถิติรอบ:</h6><select id="dash-cycle-select" class="form-select form-select-sm w-auto border-0 bg-white shadow-sm fw-bold text-primary" onchange="window.onAdminCycleChange(this.value)"></select></div>
+              <button class="btn btn-outline-primary btn-sm" onclick="window.openEditCycleForDashboard()"><i class="bi bi-gear-fill me-1"></i> ตั้งค่าเป้าหมาย</button>
+          </div>
+          <div class="row g-4 mb-4">
+            <div class="col-md-6"><div class="card p-4 h-100"><h6 class="fw-bold text-center mb-3">ชั่วโมงการทำงานรวม</h6><div id="chart-hours" class="d-flex justify-content-center"></div><div class="text-center mt-3"><span class="fs-4 fw-bold text-primary" id="dash-val-hours">0</span> / <span class="text-muted" id="dash-max-hours">0</span> ชม.</div></div></div>
+            <div class="col-md-6"><div class="card p-4 h-100"><h6 class="fw-bold text-center mb-3">งบประมาณที่ใช้ไป</h6><div id="chart-budget"></div><div class="d-flex justify-content-between mt-3 px-3"><div><small class="text-muted d-block">จ่ายแล้ว</small><span class="fw-bold text-success" id="dash-val-paid">0</span></div><div class="text-end"><small class="text-muted d-block">งบทั้งหมด</small><span class="fw-bold text-dark" id="dash-max-budget">0</span></div></div></div></div>
+          </div>
+          <div class="card mt-4 shadow-sm border-0">
+            <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center"><span><i class="bi bi-calendar-range-fill text-info me-2"></i> จัดการรอบการทำงาน</span><button class="btn btn-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#cycleModal"><i class="bi bi-plus-lg"></i> เพิ่มรอบ</button></div>
+            <div id="adminCycleList"><div class="text-center py-3 text-muted">กำลังโหลด...</div></div>
+          </div>
+          <div class="row mt-4">
+              <div class="col-md-6"><div class="card h-100"><div class="card-header bg-white fw-bold py-3"><i class="bi bi-trophy-fill text-warning me-2"></i> Top 5 นักศึกษาขยัน</div><ul class="list-group list-group-flush" id="topStudentList"></ul></div></div>
+              <div class="col-md-6"><div class="card h-100 p-0 overflow-hidden"><div class="card-header bg-white fw-bold py-3 border-bottom"><i class="bi bi-clock-history me-2"></i> งานล่าสุดในระบบ</div><div class="p-2 bg-light border-bottom"><input type="text" id="adminJobSearch" class="form-control form-control-sm border-0 bg-white" placeholder="ค้นหางาน..." onkeyup="window.filterAdminJobs()"></div><div id="adminList" style="max-height:300px; overflow-y:auto;"></div></div></div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="adm-finance">
+           <div class="d-flex justify-content-between align-items-center mb-3">
+             <h6 class="m-0 fw-bold">รายการเบิกจ่าย</h6>
+             <div>
+               <button class="btn btn-sm btn-secondary me-2" onclick="window.exportFinanceToCSV()"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+               <button class="btn btn-sm btn-outline-info me-1" onclick="window.bulkUpdateStatusFB('กำลังดำเนินการ')">รับเอกสาร</button>
+               <button class="btn btn-sm btn-outline-success" onclick="window.bulkUpdateStatusFB('ส่งเอกสารแล้ว')">ส่งเอกสารแล้ว</button>
+               <button class="btn btn-sm btn-outline-secondary ms-2" onclick="window.loadAdminFinanceFB()"><i class="bi bi-arrow-clockwise"></i></button>
+             </div>
+           </div>
+           <div class="card p-0 overflow-hidden"><div class="table-responsive"><table class="table table-hover mb-0 align-middle"><thead class="table-light"><tr><th class="ps-3" style="width:40px;"><input type="checkbox" id="selectAll" class="form-check-input" onclick="window.toggleAllChecks(this)"></th><th>เลขที่</th><th>ชื่อ-สกุล</th><th class="text-end">ยอดเงิน</th><th class="text-center">สถานะ</th></tr></thead><tbody id="admFinanceList"><tr><td colspan="5" class="text-center py-4">Loading...</td></tr></tbody></table></div></div>
+        </div>
+
+        <div class="tab-pane fade" id="adm-users">
+          <div class="d-flex justify-content-between mb-3">
+            <select id="userTypeSelector" class="form-select w-auto shadow-sm" onchange="window.loadUserTableFB(this.value)">
+              <option value="Students">นักศึกษา</option>
+              <option value="Teacher">อาจารย์</option>
+              <option value="Staff">เจ้าหน้าที่</option>
+              <option value="Admin">แอดมิน</option>
+            </select>
+            <div>
+              <button class="btn btn-secondary btn-sm shadow-sm me-2" onclick="window.openAddHistoryModalFB()"><i class="bi bi-clock-history me-1"></i> เพิ่มงานย้อนหลัง</button>
+              <button class="btn btn-primary btn-sm shadow-sm" onclick="window.openAddUserModalFB()"><i class="bi bi-person-plus-fill me-1"></i> เพิ่มผู้ใช้</button>
+            </div>
+          </div>
+          <div class="card p-0 overflow-hidden"><div class="table-responsive"><table class="table table-hover mb-0 align-middle" id="userTable"><thead class="table-light"><tr><th class="ps-3">ชื่อ-สกุล</th><th>ปีการศึกษา</th><th>ข้อมูล/ชม.</th><th class="text-center">จัดการ</th></tr></thead><tbody></tbody></table></div></div>
+        </div>
+
+        <div class="tab-pane fade" id="adm-profiles">
+          <div class="input-group mb-4 shadow-sm"><input type="text" id="profileSearchKey" class="form-control border-0 py-3 ps-4" placeholder="ระบุรหัส หรือ อีเมลนักศึกษา..." onkeydown="if(event.key==='Enter') window.searchStudentProfileFB()"><button class="btn btn-primary px-4" onclick="window.searchStudentProfileFB()">ค้นหา</button></div>
+          <div id="profileResult"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="cycleModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header bg-info text-white"><h5 class="modal-title fw-bold">เพิ่มรอบการทำงาน</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="form-label text-muted">ชื่อรอบ (เช่น 1/2568) <span class="text-danger">*</span></label><input type="text" id="cyc-name" class="form-control"></div><div class="row g-2 mb-3"><div class="col-6"><label class="form-label text-muted">วันเริ่ม <span class="text-danger">*</span></label><input type="date" id="cyc-start" class="form-control"></div><div class="col-6"><label class="form-label text-muted">วันสิ้นสุด <span class="text-danger">*</span></label><input type="date" id="cyc-end" class="form-control"></div></div><div class="row g-2"><div class="col-6"><label class="form-label fw-bold text-primary">เป้าหมาย ชม. <span class="text-danger">*</span></label><input type="number" id="cyc-maxh" class="form-control" placeholder="5000"></div><div class="col-6"><label class="form-label fw-bold text-success">วงเงินสูงสุด (บาท) <span class="text-danger">*</span></label><input type="number" id="cyc-maxb" class="form-control" placeholder="250000"></div></div><div class="mt-3"><label class="form-label fw-bold text-danger">เรทค่าจ้าง (บาท/ชั่วโมง) <span class="text-danger">*</span></label><input type="number" id="cyc-rate" class="form-control" value="50"></div></div><div class="modal-footer border-0"><button onclick="window.confirmAddCycleFB()" class="btn btn-info text-white px-4">บันทึก</button></div></div></div></div>
+
+<div class="modal fade" id="editCycleModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header bg-warning text-dark"><h5 class="modal-title fw-bold">แก้ไขรอบการทำงาน</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="edit-cyc-originalname"><div class="mb-3"><label class="form-label text-muted">ชื่อรอบ</label><input type="text" id="edit-cyc-name" class="form-control" disabled></div><div class="row g-2 mb-3"><div class="col-6"><label class="form-label text-muted">วันเริ่ม <span class="text-danger">*</span></label><input type="date" id="edit-cyc-start" class="form-control"></div><div class="col-6"><label class="form-label text-muted">วันสิ้นสุด <span class="text-danger">*</span></label><input type="date" id="edit-cyc-end" class="form-control"></div></div><div class="row g-2 mb-3"><div class="col-6"><label class="form-label fw-bold text-primary">เป้าหมาย ชม. <span class="text-danger">*</span></label><input type="number" id="edit-cyc-maxh" class="form-control"></div><div class="col-6"><label class="form-label fw-bold text-success">วงเงินสูงสุด <span class="text-danger">*</span></label><input type="number" id="edit-cyc-maxb" class="form-control"></div></div><div class="mb-3"><label class="form-label fw-bold text-danger">เรทค่าจ้าง (บาท/ชั่วโมง) <span class="text-danger">*</span></label><input type="number" id="edit-cyc-rate" class="form-control"></div><div class="mb-3"><label class="form-label text-muted">สถานะ</label><select id="edit-cyc-status" class="form-select"><option value="Active">Active (เปิดใช้งาน)</option><option value="Closed">Closed (ปิดรอบ)</option></select></div></div><div class="modal-footer border-0"><button onclick="window.confirmEditCycleFB()" class="btn btn-warning px-4">บันทึกการแก้ไข</button></div></div></div></div>
+
+<div class="modal fade" id="addUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title fw-bold">เพิ่มผู้ใช้</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="add-type">
+        
+        <div id="field-year" class="mb-3 d-none">
+          <label class="form-label">สำหรับรอบปีการศึกษา <span class="text-danger">*</span></label>
+          <select id="add-year" class="form-select bg-light"></select>
+        </div>
+        
+        <div id="field-id" class="mb-3 d-none">
+          <label class="form-label">รหัส นศ. <span class="text-danger">*</span></label>
+          <input type="text" id="add-id" class="form-control">
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+          <input type="text" id="add-name" class="form-control">
+        </div>
+        
+        <div id="field-major" class="mb-3 d-none">
+          <label class="form-label">สาขาวิชา <span class="text-danger">*</span></label>
+          <select id="add-major" class="form-select">
+            <option value="" selected disabled>-- เลือกสาขา --</option>
+            <option value="วิทยาศาสตร์และเทคโนโลยีอาหาร">วิทยาศาสตร์และเทคโนโลยีอาหาร</option>
+            <option value="เทคโนโลยีบรรจุภัณฑ์และวัสดุ">เทคโนโลยีบรรจุภัณฑ์และวัสดุ</option>
+            <option value="เทคโนโลยีและการจัดการอุตสาหกรรมอาหาร">เทคโนโลยีและการจัดการอุตสาหกรรมอาหาร</option>
+            <option value="การกำหนดอาหารและโภชนาการเพื่อสุขภาพ (นานาชาติ)">การกำหนดอาหารและโภชนาการเพื่อสุขภาพ (นานาชาติ)</option>
+          </select>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">อีเมล <span class="text-danger">*</span></label>
+          <input type="email" id="add-email" class="form-control" placeholder="username@psu.ac.th">
+        </div>
+        
+        <div id="field-phone" class="mb-3 d-none">
+          <label class="form-label">เบอร์โทรศัพท์ <span class="text-danger">*</span></label>
+          <input type="tel" id="add-phone" class="form-control" placeholder="08xxxxxxxx">
+        </div>
+        
+        <div id="field-limit" class="mb-3 d-none">
+          <label class="text-danger fw-bold">* จำกัดชั่วโมง</label>
+          <input type="number" id="add-limit" class="form-control" placeholder="เช่น 40">
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+        <button onclick="window.confirmAddUserFB()" class="btn btn-dark px-4">เพิ่ม</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title fw-bold">แก้ไขข้อมูลผู้ใช้</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-usr-id">
+        <input type="hidden" id="edit-usr-role">
+        
+        <div id="edit-field-year" class="mb-3 d-none">
+          <label class="form-label">ปีการศึกษา <span class="text-danger">*</span></label>
+          <select id="edit-usr-year" class="form-select bg-light"></select>
+        </div>
+        
+        <div id="edit-field-id" class="mb-3 d-none">
+          <label class="form-label">รหัส นศ. <span class="text-danger">*</span></label>
+          <input type="text" id="edit-usr-studentid" class="form-control">
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+          <input type="text" id="edit-usr-name" class="form-control">
+        </div>
+        
+        <div id="edit-field-major" class="mb-3 d-none">
+          <label class="form-label">สาขาวิชา <span class="text-danger">*</span></label>
+          <select id="edit-usr-major" class="form-select">
+            <option value="วิทยาศาสตร์และเทคโนโลยีอาหาร">วิทยาศาสตร์และเทคโนโลยีอาหาร</option>
+            <option value="เทคโนโลยีบรรจุภัณฑ์และวัสดุ">เทคโนโลยีบรรจุภัณฑ์และวัสดุ</option>
+            <option value="เทคโนโลยีและการจัดการอุตสาหกรรมอาหาร">เทคโนโลยีและการจัดการอุตสาหกรรมอาหาร</option>
+            <option value="การกำหนดอาหารและโภชนาการเพื่อสุขภาพ (นานาชาติ)">การกำหนดอาหารและโภชนาการเพื่อสุขภาพ (นานาชาติ)</option>
+          </select>
+        </div>
+        
+        <div id="edit-field-phone" class="mb-3 d-none">
+          <label class="form-label">เบอร์โทรศัพท์ <span class="text-danger">*</span></label>
+          <input type="tel" id="edit-usr-phone" class="form-control" placeholder="08xxxxxxxx">
+        </div>
+        
+        <div id="edit-field-limit" class="mb-3 d-none">
+          <label class="text-danger fw-bold">* จำกัดชั่วโมง</label>
+          <input type="number" id="edit-usr-limit" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+        <button onclick="window.confirmSaveEditUserFB()" class="btn btn-warning px-4 fw-bold">บันทึกการแก้ไข</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="addHistoryModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header bg-secondary text-white"><h5 class="modal-title fw-bold"><i class="bi bi-clock-history me-2"></i>เพิ่มข้อมูลงานย้อนหลัง</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="alert alert-light border-warning small text-muted"><i class="bi bi-info-circle me-1"></i> งานที่เพิ่มจะถูกปรับสถานะเป็น "เสร็จสิ้น" ให้ทันที</div><div class="mb-3"><label class="form-label text-muted">ค้นหานศ. (รหัสนักศึกษา หรือ อีเมล) <span class="text-danger">*</span></label><input type="text" id="hist-search" class="form-control" placeholder="เช่น 6510000000 หรือ test@psu.ac.th"></div><div class="mb-3"><label class="form-label text-muted">ชื่องาน <span class="text-danger">*</span></label><input type="text" id="hist-task" class="form-control"></div><div class="mb-3"><label class="form-label text-muted">ผู้คุมงาน (ชื่ออาจารย์/เจ้าหน้าที่) <span class="text-danger">*</span></label><input type="text" id="hist-teacher" class="form-control"></div><div class="row g-2 mb-3"><div class="col-6"><label class="form-label text-muted">วันที่ทำงาน <span class="text-danger">*</span></label><input type="date" id="hist-date" class="form-control"></div><div class="col-6"><label class="form-label text-muted">ปีการศึกษา <span class="text-danger">*</span></label><input type="text" id="hist-year" class="form-control" placeholder="เช่น 1/2568"></div></div><div class="row g-2 mb-3"><div class="col-4"><label class="form-label text-muted">เริ่มเวลา <span class="text-danger">*</span></label><input type="time" id="hist-start" class="form-control"></div><div class="col-4"><label class="form-label text-muted">เลิกเวลา <span class="text-danger">*</span></label><input type="time" id="hist-end" class="form-control" onchange="window.calcHistHours()"></div><div class="col-4"><label class="form-label text-primary fw-bold">ชั่วโมงที่ได้ <span class="text-danger">*</span></label><input type="number" step="0.1" id="hist-hours" class="form-control"></div></div><div class="mb-3 form-check bg-light p-3 rounded-3 border"><input type="checkbox" class="form-check-input ms-1" id="hist-withdrawn"><label class="form-check-label text-danger fw-bold ms-2" for="hist-withdrawn">รายการนี้ถูกเบิกเงินไปแล้ว (จะไม่นำมาคิดเงินซ้ำ)</label></div></div><div class="modal-footer border-0"><button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button><button onclick="window.confirmAddHistoryJobFB()" class="btn btn-secondary px-4">บันทึกข้อมูล</button></div></div></div></div>
+
+<script type="module" src="./js/admin.js"></script>
+
+<div class="modal fade" id="editHistoryModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>แก้ไขประวัติงาน / ชั่วโมง</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-hist-id">
+        <input type="hidden" id="edit-hist-email">
+        <div class="mb-3">
+          <label class="form-label text-muted">ชื่องาน <span class="text-danger">*</span></label>
+          <input type="text" id="edit-hist-task" class="form-control">
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label text-muted">วันที่ทำงาน <span class="text-danger">*</span></label>
+            <input type="date" id="edit-hist-date" class="form-control">
+          </div>
+          <div class="col-6">
+            <label class="form-label text-primary fw-bold">ชั่วโมงที่ได้ <span class="text-danger">*</span></label>
+            <input type="number" step="0.1" id="edit-hist-hours" class="form-control">
+          </div>
+        </div>
+        <div class="mb-3 form-check bg-light p-3 rounded-3 border">
+          <input type="checkbox" class="form-check-input ms-1" id="edit-hist-withdrawn">
+          <label class="form-check-label text-danger fw-bold ms-2" for="edit-hist-withdrawn">รายการนี้ถูกเบิกเงินไปแล้ว (จะไม่นำมาคิดเงินซ้ำ)</label>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+        <button onclick="window.confirmEditHistoryJobFB()" class="btn btn-warning px-4 fw-bold">บันทึกการแก้ไข</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

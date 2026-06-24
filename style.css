@@ -1,0 +1,39 @@
+ :root {
+      --primary-gradient: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%);
+      --card-bg: rgba(255, 255, 255, 0.98);
+      --card-shadow: 0 15px 35px rgba(0, 0, 0, 0.08), 0 5px 15px rgba(0,0,0,0.05);
+      --card-hover-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+      --border-radius: 20px;
+    }
+    body { font-family: 'Prompt', sans-serif; background: radial-gradient(circle at 50% 0%, #f0f7ff 0%, #dee8f2 100%); background-attachment: fixed; padding-top: 90px; color: #2c3e50; min-height: 100vh; }
+    .hidden { display: none !important; }
+    .login-wrapper { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #e0f7fa 0%, #e2e6ea 100%); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+    .login-card { background: white; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.15); border: none; overflow: hidden; }
+    .navbar { background: rgba(255, 255, 255, 0.9) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding: 12px 0; backdrop-filter: blur(12px); z-index: 1030; }
+    .navbar-brand img { height: 42px; margin-right: 12px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); } 
+    .navbar-brand { cursor: pointer; font-weight: 600; color: #0043a8 !important; } 
+    .login-logo { width: 120px; height: auto; margin-bottom: 15px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1)); } 
+    .nav-link { color: #6c757d !important; font-weight: 500; border-radius: 50px; padding: 10px 20px !important; transition: all 0.3s ease; cursor: pointer; }
+    .nav-link:hover { background-color: rgba(13, 110, 253, 0.08); color: #0d6efd !important; transform: translateY(-1px); }
+    .nav-link.active { background: var(--primary-gradient) !important; color: white !important; font-weight: 600; box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3); }
+    .form-control, .form-select { border-radius: 12px; padding: 12px 15px; border: 1px solid #e0e0e0; background-color: #fff; transition: all 0.2s; }
+    .form-select { padding-right: 2.5rem; background-position: right 1rem center; }
+    .form-control:focus, .form-select:focus { box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1); border-color: #0d6efd; background-color: #fff; transform: translateY(-1px); }
+    .card { border: none; border-radius: var(--border-radius); box-shadow: var(--card-shadow); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s; background: var(--card-bg); margin-bottom: 24px; }
+    .card-announce:hover { transform: translateY(-8px); box-shadow: var(--card-hover-shadow); }
+    .stat-box { border-radius: var(--border-radius); padding: 25px 20px; color: white; text-align: center; background: var(--primary-gradient); box-shadow: 0 10px 20px rgba(13, 110, 253, 0.25); transition: transform 0.2s; }
+    .stat-box:hover { transform: translateY(-3px); }
+    .stat-box.bg-success { background: linear-gradient(135deg, #198754 0%, #146c43 100%); box-shadow: 0 10px 20px rgba(25, 135, 84, 0.25); }
+    .stat-box.bg-warning { background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%); box-shadow: 0 10px 20px rgba(255, 193, 7, 0.25); color: #000; }
+    .btn { border-radius: 50px; padding: 10px 24px; font-weight: 600; letter-spacing: 0.3px; transition: all 0.2s; }
+    .btn:active { transform: scale(0.95); }
+    .btn-primary { background: var(--primary-gradient); border: none; box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3); }
+    .btn-primary:hover { box-shadow: 0 6px 15px rgba(13, 110, 253, 0.4); }
+    @keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    .content-page { animation: slideUpFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .badge { padding: 0.5em 0.8em; font-weight: 600; letter-spacing: 0.3px; }
+    .badge-soft-success { background-color: #d1e7dd; color: #0f5132; }
+    .badge-soft-warning { background-color: #fff3cd; color: #664d03; }
+    .badge-soft-danger { background-color: #f8d7da; color: #842029; }
+    .badge-soft-info { background-color: #cff4fc; color: #055160; }
+    .badge-soft-primary { background-color: #cfe2ff; color: #084298; }

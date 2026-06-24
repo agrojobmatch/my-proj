@@ -1,9 +1,10 @@
 // public/js/admin.js
 import { app, auth, db } from './firebase.js';
 import { signOut, onAuthStateChanged, sendPasswordResetEmail, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { collection, doc, query, where, getDocs, getDoc, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, doc, query, where, getDocs, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+
 window.user = null;
 window.globalJobs = [];
 window.allCycles = [];
@@ -17,10 +18,7 @@ onAuthStateChanged(auth, async (fbUser) => {
     if (fbUser) {
         Swal.fire({ title: 'กำลังตรวจสอบสิทธิ์ Admin...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         try {
-           // ดึงค่ารอบที่แอดมินกำลังเลือกดูอยู่ (อิงจาก Dropdown เลือกรอบ)
-
-// ดึงข้อมูล Admin/Staff เพื่อยืนยันตัวตน
-            const q = query(collection(db, "users"), where("email", "==", fbUser.email));
+            const q = query(collection(db, "users"), where("email", "==", fbUser.email), where("role", "==", "Admin"));
             const snap = await getDocs(q);
             
             if (!snap.empty) {
@@ -139,14 +137,8 @@ window.loadAdminDashboardFB = function(year) {
             chartBudgetObj.render(); 
         }
 
-// --- เพิ่มโค้ดชุดนี้เข้าไป เพื่อรีเฟรชตารางนักศึกษาออโต้ ---
-        const userTypeSel = document.getElementById('userTypeSelector');
-        if (userTypeSel && userTypeSel.value === 'Students') {
-            window.loadUserTableFB('Students');
-        }
-        // ---------------------------------------------------
-
-    }); // <--- ปิดคำสั่ง onSnapshot
+        renderAdminJobList(window.globalJobs);
+    });
 };
 
 function renderAdminJobList(list) {
@@ -259,108 +251,30 @@ window.toggleAllChecks = function(src) { document.querySelectorAll('.finance-che
 // ส่วนที่ 3: ระบบจัดการผู้ใช้งาน (Users & Search)
 // ==========================================
 window.loadUserTableFB = async function(type) {
-    // 1. ตรวจสอบว่าแอดมินกำลังดูรอบไหนอยู่ ถ้าไม่มีค่าให้ใช้ค่า Default (เช่น "1/2568")
     let currentYear = (window.user && window.user.year) ? window.user.year : "1/2568";
     const roleToSearch = type === 'Students' ? 'Student' : type; 
     let q;
     
-    // ✅ 2. Filter รายชื่อนักศึกษา โดยเจาะจงเฉพาะ "role" และ "year" รอบปัจจุบัน
     if (roleToSearch === 'Student') { 
-        q = query(collection(db, "users"), 
-            where("role", "==", "Student"), 
-            where("year", "==", currentYear)
-        ); 
+        q = query(collection(db, "users"), where("role", "==", "Student"), where("year", "==", currentYear)); 
     } else { 
-        // Admin, Teacher, Staff ไม่ได้แยกตามรอบ ดึงมาแสดงได้เลย
         q = query(collection(db, "users"), where("role", "==", roleToSearch)); 
     }
     
-    try {
-        const snap = await getDocs(q); 
-        
-        // ✅ 3. ดึงประวัติการทำงาน (Jobs) เฉพาะของ "รอบปีปัจจุบัน" และสถานะ "Completed" มาคำนวณชั่วโมง
-        const jobsSnap = await getDocs(query(
-            collection(db, "jobs"), 
-            where("year", "==", currentYear), 
-            where("status", "==", "Completed")
-        ));
-        
-        let yearJobs = [];
-        jobsSnap.forEach(doc => { yearJobs.push(doc.data()); });
-
-        let h = '';
-        snap.forEach(doc => { 
-            let r = doc.data(); 
-            r.id = doc.id; // ใช้ Document ID ใหม่ที่ตั้งไว้ (email-year)
+    const snap = await getDocs(q); let h = '';
+    
+    snap.forEach(doc => { 
+        let r = doc.data(); r.id = doc.id; 
+        if(type=='Students') { 
+            let stuHours = 0; window.globalJobs.forEach(j => { if (j.studentEmail === r.email && j.status === 'Completed') stuHours += parseFloat(j.hours||0); });
+            let lim = parseFloat(r.limit) || 40; let pct = Math.min((stuHours/lim)*100, 100);
             
-            if(type=='Students') { 
-                let stuHours = 0; 
-                // ✅ 4. คำนวณชั่วโมงโดยเอาเฉพาะงานในปีปัจจุบันมาบวก
-                yearJobs.forEach(j => { 
-                    if (j.studentEmail === r.email) stuHours += parseFloat(j.hours||0); 
-                });
-                
-                let lim = parseFloat(r.limit) || 40; 
-                let pct = Math.min((stuHours/lim)*100, 100);
-                
-                h += `<tr>
-                    <td class="ps-3">
-                        <div class="fw-bold text-dark">${escapeHtml(r.name)}</div>
-                        <small class="text-muted">${escapeHtml(r.studentId)} &bull; ${escapeHtml(r.major)}</small>
-                    </td>
-                    <td><span class="badge bg-light text-dark border">${r.year}</span></td>
-                    <td>
-                        <div class="d-flex justify-content-between small mb-1">
-                            <span><span class="fw-bold text-primary">${stuHours.toFixed(1)}</span> / ${lim} ชม.</span>
-                            <span>${pct.toFixed(0)}%</span>
-                        </div>
-                        <div class="progress" style="height:6px;">
-                            <div class="progress-bar ${stuHours>=lim?'bg-danger':'bg-success'}" style="width:${pct}%"></div>
-                        </div>
-                    </td>
-                    <td class="text-center">
-                        // เปลี่ยนบรรทัด onclick เดิม ให้เป็นแบบนี้ครับ:
-                        <button class="btn btn-sm btn-outline-info rounded-circle me-1" 
-                            onclick="document.getElementById('profileSearchKey').value='${escapeHtml(r.email)}'; window.searchStudentProfileFB(); bootstrap.Tab.getOrCreateInstance(document.querySelector('[data-bs-target=&quot;#adm-profiles&quot;]')).show();" 
-                            title="ดูประวัติ"><i class="bi bi-search"></i></button>
-                        <button class="btn btn-sm btn-outline-secondary rounded-circle me-1" 
-                            onclick="window.adminResetPasswordFB('${escapeHtml(r.email)}')" 
-                            title="ส่งลิงก์รีเซ็ต"><i class="bi bi-key"></i></button>
-                        <button class="btn btn-sm btn-outline-warning rounded-circle me-1" 
-                            onclick="window.openEditUserModalFB('${r.id}', '${escapeHtml(r.name)}', '${escapeHtml(r.studentId||'')}', '${escapeHtml(r.major||'')}', '${r.limit||40}', '${r.year}', '${r.role}', '${escapeHtml(r.phone||'')}')" 
-                            title="แก้ไข"><i class="bi bi-pencil-square"></i></button>
-                        <button class="btn btn-sm btn-outline-danger rounded-circle" 
-                            onclick="window.deleteUserFB('${r.id}')" 
-                            title="ลบ"><i class="bi bi-trash"></i></button>
-                    </td>
-                </tr>`; 
-            } else { 
-                h += `<tr>
-                    <td class="ps-3">
-                        <div class="fw-bold text-dark">${escapeHtml(r.name)}</div>
-                    </td>
-                    <td>-</td>
-                    <td><small class="text-muted">${escapeHtml(r.email)}</small></td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-outline-secondary rounded-circle me-1" 
-                            onclick="window.adminResetPasswordFB('${escapeHtml(r.email)}')" 
-                            title="ส่งลิงก์รีเซ็ต"><i class="bi bi-key"></i></button>
-                        <button class="btn btn-sm btn-outline-warning rounded-circle me-1" 
-                            onclick="window.openEditUserModalFB('${r.id}', '${escapeHtml(r.name)}', '', '', '', '', '${r.role}', '${escapeHtml(r.phone||'')}')" 
-                            title="แก้ไข"><i class="bi bi-pencil-square"></i></button>
-                        <button class="btn btn-sm btn-outline-danger rounded-circle" 
-                            onclick="window.deleteUserFB('${r.id}')"><i class="bi bi-trash"></i></button>
-                    </td>
-                </tr>`; 
-            } 
-        });
-        
-        // อัปเดตข้อมูลขึ้นหน้าเว็บ
-        if(document.querySelector('#userTable tbody')) 
-            document.querySelector('#userTable tbody').innerHTML = h || '<tr><td colspan="4" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>';
-    } catch (err) {
-        console.error("Error loading user table: ", err);
-    }
+            h += `<tr><td class="ps-3"><div class="fw-bold text-dark">${escapeHtml(r.name)}</div><small class="text-muted">${escapeHtml(r.studentId)} &bull; ${escapeHtml(r.major)}</small></td><td><span class="badge bg-light text-dark border">${r.year}</span></td><td><div class="d-flex justify-content-between small mb-1"><span><span class="fw-bold text-primary">${stuHours.toFixed(1)}</span> / ${lim} ชม.</span><span>${pct.toFixed(0)}%</span></div><div class="progress" style="height:6px;"><div class="progress-bar ${stuHours>=lim?'bg-danger':'bg-success'}" style="width:${pct}%"></div></div></td><td class="text-center"><button class="btn btn-sm btn-outline-info rounded-circle me-1" onclick="document.getElementById('profileSearchKey').value='${r.email}'; window.searchStudentProfileFB(); bootstrap.Tab.getOrCreateInstance(document.querySelector('[data-bs-target=\\'#adm-profiles\\']')).show();" title="ดูประวัติ"><i class="bi bi-search"></i></button><button class="btn btn-sm btn-outline-secondary rounded-circle me-1" onclick="window.adminResetPasswordFB('${r.email}')" title="ส่งลิงก์รีเซ็ตรหัสผ่าน"><i class="bi bi-key"></i></button><button class="btn btn-sm btn-outline-warning rounded-circle me-1" onclick="window.openEditUserModalFB('${r.id}', '${escapeHtml(r.name)}', '${escapeHtml(r.studentId||'')}', '${escapeHtml(r.major||'')}', '${r.limit||40}', '${r.year}', '${r.role}', '${escapeHtml(r.phone||'')}')" title="แก้ไขข้อมูล"><i class="bi bi-pencil-square"></i></button><button class="btn btn-sm btn-outline-danger rounded-circle" onclick="window.deleteUserFB('${r.id}')" title="ลบ"><i class="bi bi-trash"></i></button></td></tr>`; 
+        } else { 
+            h += `<tr><td class="ps-3"><div class="fw-bold text-dark">${escapeHtml(r.name)}</div></td><td>-</td><td><small class="text-muted">${escapeHtml(r.email)}</small></td><td class="text-center"><button class="btn btn-sm btn-outline-secondary rounded-circle me-1" onclick="window.adminResetPasswordFB('${r.email}')" title="ส่งลิงก์รีเซ็ตรหัสผ่าน"><i class="bi bi-key"></i></button><button class="btn btn-sm btn-outline-warning rounded-circle me-1" onclick="window.openEditUserModalFB('${r.id}', '${escapeHtml(r.name)}', '', '', '', '', '${r.role}', '${escapeHtml(r.phone||'')}')" title="แก้ไขข้อมูล"><i class="bi bi-pencil-square"></i></button><button class="btn btn-sm btn-outline-danger rounded-circle" onclick="window.deleteUserFB('${r.id}')"><i class="bi bi-trash"></i></button></td></tr>`; 
+        } 
+    });
+    if(document.querySelector('#userTable tbody')) document.querySelector('#userTable tbody').innerHTML = h || '<tr><td colspan="4" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>';
 };
 
 window.openAddUserModalFB = function() { 
@@ -368,91 +282,62 @@ window.openAddUserModalFB = function() {
     document.getElementById('add-type').value = t; 
     document.getElementById('add-phone').value = ''; 
     if(t == 'Students'){ 
-        document.getElementById('field-id').classList.remove('d-none'); 
-        document.getElementById('field-limit').classList.remove('d-none'); 
-        document.getElementById('field-major').classList.remove('d-none'); 
-        document.getElementById('field-year').classList.remove('d-none'); 
-        document.getElementById('field-phone').classList.remove('d-none'); 
+        document.getElementById('field-id').classList.remove('hidden'); 
+        document.getElementById('field-limit').classList.remove('hidden'); 
+        document.getElementById('field-major').classList.remove('hidden'); 
+        document.getElementById('field-year').classList.remove('hidden'); 
+        document.getElementById('field-phone').classList.remove('hidden'); 
     } else { 
-        document.getElementById('field-id').classList.add('d-none');
-        document.getElementById('field-limit').classList.add('d-none'); 
-        document.getElementById('field-major').classList.add('d-none'); 
-        document.getElementById('field-year').classList.add('d-none'); 
-        document.getElementById('field-phone').classList.add('d-none'); 
+        document.getElementById('field-id').classList.add('hidden'); 
+        document.getElementById('field-limit').classList.add('hidden'); 
+        document.getElementById('field-major').classList.add('hidden'); 
+        document.getElementById('field-year').classList.add('hidden'); 
+        document.getElementById('field-phone').classList.add('hidden'); 
     } 
     bootstrap.Modal.getOrCreateInstance(document.getElementById('addUserModal')).show(); 
 };
 
 window.confirmAddUserFB = async function() {
-    const t = document.getElementById('add-type').value, 
-          email = document.getElementById('add-email').value.trim().toLowerCase(), 
-          name = document.getElementById('add-name').value.trim(), 
-          year = document.getElementById('add-year').value, 
-          limit = document.getElementById('add-limit').value, 
-          major = document.getElementById('add-major').value, 
-          id = document.getElementById('add-id').value.trim(), 
-          phone = document.getElementById('add-phone').value.trim();
-    
+    // โค้ดสร้าง User ด้วย Secondary App (ป้องกันการล็อกเอาท์แอดมินตอนสร้าง)
+    const t = document.getElementById('add-type').value, email = document.getElementById('add-email').value.trim().toLowerCase(), name = document.getElementById('add-name').value.trim(), year = document.getElementById('add-year').value, limit = document.getElementById('add-limit').value, major = document.getElementById('add-major').value, id = document.getElementById('add-id').value.trim(), phone = document.getElementById('add-phone').value.trim();
     if(!email || !name) return Swal.fire('เตือน', 'กรุณากรอกอีเมลและชื่อ-สกุล', 'warning');
-    if(t === 'Students' && (!id || !major || !limit || !year)) return Swal.fire('เตือน', 'กรุณากรอกข้อมูลนักศึกษาให้ครบถ้วน', 'warning');
+    if(t === 'Students' && (!id || !major || !limit || !year)) return Swal.fire('เตือน', 'กรุณากรอกข้อมูลนักศึกษาให้ครบทุกช่อง', 'warning');
 
     const realRole = t === 'Students' ? 'Student' : t;
     Swal.fire({ title: 'กำลังสร้างบัญชี...', didOpen: ()=>Swal.showLoading() });
     
     try { 
         if (realRole === 'Student') { 
-            const docId = `${email}-${year}`;
-            const docRef = doc(db, "users", docId);
-            const docSnap = await getDoc(docRef);
-            
-            if(docSnap.exists()) {
-                return Swal.fire('แจ้งเตือน', `อีเมลนี้มีชื่ออยู่ในรอบ ${year} แล้ว`, 'warning'); 
-            }
+            const qCheck = query(collection(db, "users"), where("email", "==", email), where("year", "==", year)); 
+            const snapCheck = await getDocs(qCheck); 
+            if(!snapCheck.empty) return Swal.fire('แจ้งเตือน', `อีเมลนี้มีชื่ออยู่ในรอบ ${year} แล้ว`, 'warning'); 
         }
         
+        // Secondary App
         try { 
+            // ต้องนำ config มาวางตรงนี้อีกทีสำหรับการสร้าง Secondary App
             const firebaseConfig = app.options; 
             const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp" + Date.now()); 
             const secondaryAuth = getAuth(secondaryApp); 
             await createUserWithEmailAndPassword(secondaryAuth, email, "Agro123456"); 
             await signOut(secondaryAuth); 
-            deleteApp(secondaryApp);
         } catch (authErr) { 
             if (authErr.code !== 'auth/email-already-in-use') { 
-                console.error(authErr); 
-                return Swal.fire('ผิดพลาด', 'ไม่สามารถสร้างรหัสผ่านได้: ' + authErr.message, 'error'); 
+                console.error(authErr); return Swal.fire('ผิดพลาด', 'ไม่สามารถสร้างรหัสผ่านได้: ' + authErr.message, 'error'); 
             } 
         }
 
         if (realRole === 'Student') { 
-            const docId = `${email}-${year}`;
-            await setDoc(doc(db, "users", docId), { 
-                email: email, name: name, role: realRole, year: year, 
-                limit: parseFloat(limit) || 40, major: major||'', 
-                studentId: id||'', phone: phone||'', createdAt: serverTimestamp()
-            }); 
+            await addDoc(collection(db, "users"), { email: email, name: name, role: realRole, year: year, limit: limit||40, major: major||'', studentId: id||'', phone: phone||'' }); 
         } else { 
-            await setDoc(doc(db, "users", email), { 
-                email: email, name: name, role: realRole, year: year||'', 
-                limit: parseFloat(limit) || 40, major: major||'', 
-                studentId: id||'', phone: phone||'', createdAt: serverTimestamp()
-            }); 
+            await setDoc(doc(db, "users", email), { email: email, name: name, role: realRole, year: year||'', limit: limit||40, major: major||'', studentId: id||'', phone: phone||'' }); 
         }
         
-        document.getElementById('add-email').value = ''; 
-        document.getElementById('add-name').value = ''; 
-        document.getElementById('add-id').value = ''; 
-        document.getElementById('add-limit').value = ''; 
-        document.getElementById('add-phone').value = ''; 
-        document.getElementById('add-major').selectedIndex = 0;
-        document.getElementById('add-year').selectedIndex = 0;
-        
+        document.getElementById('add-email').value = ''; document.getElementById('add-name').value = ''; document.getElementById('add-id').value = ''; document.getElementById('add-limit').value = ''; document.getElementById('add-phone').value = ''; document.getElementById('add-major').selectedIndex = 0;
         Swal.fire('สำเร็จ', `เพิ่มรายชื่อ${realRole === 'Student' ? `สำหรับรอบ ${year}` : ''} และตั้งรหัสผ่านเรียบร้อย`, 'success'); 
         bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide(); 
         window.loadUserTableFB(t);
-    } catch (err) { 
-        Swal.fire('ผิดพลาด', err.message, 'error'); 
-    }
+    } catch(err) { Swal.fire('ผิดพลาด', err.message, 'error'); }
 };
 
 window.deleteUserFB = async function(id) { Swal.fire({title:'ลบ?',icon:'warning',showCancelButton:true}).then(async r=>{ if(r.isConfirmed){ try { await deleteDoc(doc(db, "users", id)); window.loadUserTableFB(document.getElementById('userTypeSelector').value); Swal.fire('สำเร็จ', 'ลบผู้ใช้เรียบร้อย', 'success'); } catch(e) { Swal.fire('ผิดพลาด', e.message, 'error'); } } }); };
@@ -461,64 +346,25 @@ window.openEditUserModalFB = function(id, name, studentId, major, limit, year, r
     document.getElementById('edit-usr-id').value = id; document.getElementById('edit-usr-role').value = role; document.getElementById('edit-usr-name').value = name;
     let yearHtml = document.getElementById('add-year').innerHTML; document.getElementById('edit-usr-year').innerHTML = yearHtml;
     if (role === 'Student') {
-        document.getElementById('edit-field-id').classList.remove('d-none'); document.getElementById('edit-field-limit').classList.remove('d-none'); document.getElementById('edit-field-major').classList.remove('d-none'); document.getElementById('edit-field-year').classList.remove('d-none'); document.getElementById('edit-field-phone').classList.remove('d-none');
+        document.getElementById('edit-field-id').classList.remove('hidden'); document.getElementById('edit-field-limit').classList.remove('hidden'); document.getElementById('edit-field-major').classList.remove('hidden'); document.getElementById('edit-field-year').classList.remove('hidden'); document.getElementById('edit-field-phone').classList.remove('hidden');
         document.getElementById('edit-usr-studentid').value = studentId; document.getElementById('edit-usr-major').value = major; document.getElementById('edit-usr-limit').value = limit; document.getElementById('edit-usr-year').value = year; document.getElementById('edit-usr-phone').value = phone || '';
     } else {
-        document.getElementById('edit-field-id').classList.add('d-none'); document.getElementById('edit-field-limit').classList.add('d-none'); document.getElementById('edit-field-major').classList.add('d-none'); document.getElementById('edit-field-year').classList.add('d-none'); document.getElementById('edit-field-phone').classList.remove('d-none'); document.getElementById('edit-usr-phone').value = phone || '';
+        document.getElementById('edit-field-id').classList.add('hidden'); document.getElementById('edit-field-limit').classList.add('hidden'); document.getElementById('edit-field-major').classList.add('hidden'); document.getElementById('edit-field-year').classList.add('hidden'); document.getElementById('edit-field-phone').classList.remove('hidden'); document.getElementById('edit-usr-phone').value = phone || '';
     }
     bootstrap.Modal.getOrCreateInstance(document.getElementById('editUserModal')).show();
 };
 
 window.confirmSaveEditUserFB = async function() {
-    const id = document.getElementById('edit-usr-id').value, 
-          role = document.getElementById('edit-usr-role').value, 
-          name = document.getElementById('edit-usr-name').value.trim();
-    
+    const id = document.getElementById('edit-usr-id').value, role = document.getElementById('edit-usr-role').value, name = document.getElementById('edit-usr-name').value.trim();
     if(!name) return Swal.fire('เตือน', 'กรุณากรอกชื่อ-สกุล', 'warning');
-    
     let updateData = { name: name };
-  if(role === 'Student') {
-        updateData.studentId = document.getElementById('edit-usr-studentid').value.trim(); 
-        updateData.major = document.getElementById('edit-usr-major').value; 
-        updateData.limit = parseFloat(document.getElementById('edit-usr-limit').value) || 40; // <--- ต้องเป็นแบบนี้
-        updateData.year = document.getElementById('edit-usr-year').value; 
-        updateData.phone = document.getElementById('edit-usr-phone').value.trim();    
-        if(!updateData.studentId || !updateData.major || !updateData.limit || !updateData.year) 
-            return Swal.fire('เตือน', 'กรุณากรอกข้อมูลนักศึกษาให้ครบถ้วน', 'warning');
-        
-        // ✅ ป้องกันไม่ให้แอดมินใส่โควตาติดลบ
-        if (parseFloat(updateData.limit) < 0) 
-            return Swal.fire('เตือน', 'โควตาชั่วโมงไม่ควรติดลบ', 'warning');
-    } else { 
-        // สำหรับ Teacher/Staff/Admin
-        updateData.phone = document.getElementById('edit-usr-phone').value.trim(); 
-    }
+    if(role === 'Student') {
+        updateData.studentId = document.getElementById('edit-usr-studentid').value.trim(); updateData.major = document.getElementById('edit-usr-major').value; updateData.limit = document.getElementById('edit-usr-limit').value; updateData.year = document.getElementById('edit-usr-year').value; updateData.phone = document.getElementById('edit-usr-phone').value.trim();
+        if(!updateData.studentId || !updateData.major || !updateData.limit || !updateData.year) return Swal.fire('เตือน', 'กรุณากรอกข้อมูลนักศึกษาให้ครบทุกช่อง', 'warning');
+    } else { updateData.phone = document.getElementById('edit-usr-phone').value.trim(); }
 
     Swal.fire({ title: 'กำลังบันทึกข้อมูล...', didOpen: ()=>Swal.showLoading() });
-    try { 
-        // ✅ บันทึกข้อมูลกลับไปที่ Firestore โดยใช้ id ที่ส่งมาจากตาราง (ซึ่งตอนนี้เป็น email-year แล้ว)
-        await updateDoc(doc(db, "users", id), updateData); 
-        
-        Swal.fire('สำเร็จ', 'แก้ไขข้อมูลผู้ใช้เรียบร้อย', 'success'); 
-        bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide(); 
-        
-        // โหลดตารางใหม่เพื่อให้ข้อมูลอัปเดตทันที
-        window.loadUserTableFB(document.getElementById('userTypeSelector').value); 
-    } catch(e) { 
-        Swal.fire('ผิดพลาด', e.message, 'error'); 
-    }
-    try { 
-        // ✅ บันทึกข้อมูลกลับไปที่ Firestore โดยใช้ id ที่ส่งมาจากตาราง (ซึ่งตอนนี้เป็น email-year แล้ว)
-        await updateDoc(doc(db, "users", id), updateData); 
-        
-        Swal.fire('สำเร็จ', 'แก้ไขข้อมูลผู้ใช้เรียบร้อย', 'success'); 
-        bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide(); 
-        
-        // โหลดตารางใหม่เพื่อให้ข้อมูลอัปเดตทันที
-        window.loadUserTableFB(document.getElementById('userTypeSelector').value); 
-    } catch(e) { 
-        Swal.fire('ผิดพลาด', e.message, 'error'); 
-    }
+    try { await updateDoc(doc(db, "users", id), updateData); Swal.fire('สำเร็จ', 'แก้ไขข้อมูลผู้ใช้เรียบร้อย', 'success'); bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide(); window.loadUserTableFB(document.getElementById('userTypeSelector').value); } catch(e) { Swal.fire('ผิดพลาด', e.message, 'error'); }
 };
 
 window.adminResetPasswordFB = async function(userEmail) {
@@ -556,17 +402,10 @@ window.searchStudentProfileFB = async function() {
         
         if(!u) return document.getElementById('profileResult').innerHTML = `<div class="alert alert-warning border-0 shadow-sm">ไม่พบข้อมูล (ลองตรวจสอบอีเมลหรือรหัสนักศึกษาอีกครั้ง)</div>`;
         
-     // 2. ดึงงานทั้งหมดของนักศึกษา (ถอด orderBy ออกเพื่อแก้ปัญหาโหลดค้างเรื่อง Index)
-// 2. ดึงงานทั้งหมดของนักศึกษา (ถอด orderBy ออกเพื่อแก้ปัญหาโหลดค้างเรื่อง Index)
-        let targetYear = document.getElementById('dash-cycle-select') ? document.getElementById('dash-cycle-select').value : (window.user && window.user.year ? window.user.year : "1/2568");
-
-        const jSnap = await getDocs(query(collection(db, "jobs"), 
-            where("studentEmail", "==", u.email), 
-            where("year", "==", targetYear) // <--- ใช้ targetYear ตรงนี้
-        ));
-const jSnap = await getDocs(query(collection(db, "jobs"), 
+        // 2. ดึงงานทั้งหมดของนักศึกษา (ถอด orderBy ออกเพื่อแก้ปัญหาโหลดค้างเรื่อง Index)
+       const jSnap = await getDocs(query(collection(db, "jobs"), 
     where("studentEmail", "==", u.email), 
-    where("year", "==", targetYear) 
+    where("year", "==", document.getElementById('dash-cycle-select').value) // หรือ window.user.year
 ));
         // เอาข้อมูลใส่ Array ก่อนเพื่อเอามาเรียงลำดับ
         let jobsArray = [];
@@ -674,7 +513,6 @@ window.confirmEditHistoryJobFB = async function() {
         // รีเฟรชโปรไฟล์นักศึกษา
         document.getElementById('profileSearchKey').value = studentEmail;
         window.searchStudentProfileFB();
-        let targetYear = document.getElementById('dash-cycle-select') ? document.getElementById('dash-cycle-select').value : (window.user && window.user.year ? window.user.year : "1/2568");
         // รีเฟรชตารางหน้าผู้ใช้งาน
         if (typeof window.loadUserTableFB === 'function') window.loadUserTableFB(document.getElementById('userTypeSelector').value);
         if (typeof window.loadAdminDashboardFB === 'function') window.loadAdminDashboardFB(window.user.year);
@@ -793,9 +631,9 @@ window.confirmAddHistoryJobFB = async function() {
         if (typeof window.loadUserTableFB === 'function') window.loadUserTableFB(document.getElementById('userTypeSelector').value);
         if (typeof window.loadAdminDashboardFB === 'function') window.loadAdminDashboardFB(window.user.year);
     } catch(e) { Swal.fire('ผิดพลาด', e.message, 'error'); }
-};
+    };
 
-// ==========================================
+    // ==========================================
 // ส่วนเพิ่มเติม: ระบบคำนวณงบประมาณอัตโนมัติ (รอบการทำงาน)
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
